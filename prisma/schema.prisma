@@ -1,0 +1,226 @@
+// prisma/schema.prisma
+
+// Настройка подключения к PostgreSQL
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Строка подключения из .env
+}
+
+// Генерация Prisma Client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Роли пользователей
+enum Role {
+  USER
+  ADMIN
+  TEACHER
+}
+
+// Модель пользователей
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  role      Role     @default(USER)
+  avatarUrl String? // Фото профиля
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Отношения
+  taskSubmissions         TaskSubmission[]
+  enrollments             Enrollment[]
+  progress                Progress[]
+  createdCourses          Course[]               @relation("CreatedCourses")
+  comments                Comment[]
+  challengeParticipations ChallengeParticipant[]
+  uploadedFiles           File[]
+  quizProgress            QuizProgress[]
+}
+
+// Модель курсов
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Связь с автором курса
+  authorId String?
+  author   User?   @relation("CreatedCourses", fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Отношения
+  lessons     Lesson[]
+  enrollments Enrollment[]
+}
+
+// Промежуточная таблица "Запись на курс"
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String
+  courseId   String
+  enrolledAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId]) // Уникальность записи на курс
+}
+
+model Lesson {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  videoUrl  String?
+  theory    String?
+  imageUrl    String?
+  courseId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Обратные связи
+  course     Course     @relation(fields: [courseId], references: [id])
+  quizzes    Quiz[]
+  tasks      Tasks[]
+  progresses Progress[]
+  comments   Comment[]
+}
+
+model PracticalTask {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  objectives  String // Кратко: пункты / требования
+  createdAt   DateTime @default(now())
+
+  submissions TaskSubmission[]
+}
+
+model TaskSubmission {
+  id          String   @id @default(uuid())
+  taskId      String
+  studentId   String
+  fileUrl     String // Ссылка на загруженный файл (.blend / .stl / screenshot)
+  comment     String? // Комментарий ученика (опционально)
+  grade       Int? // Оценка от преподавателя
+  feedback    String? // Комментарий преподавателя
+  submittedAt DateTime @default(now())
+
+  task    PracticalTask @relation(fields: [taskId], references: [id])
+  student User          @relation(fields: [studentId], references: [id])
+}
+
+model Quiz {
+  id         String         @id @default(uuid())
+  lessonId   String
+  question   String
+  correct    String
+  createdAt  DateTime       @default(now())
+  progresses QuizProgress[]
+  options    QuizOption[]
+  lesson     Lesson         @relation(fields: [lessonId], references: [id])
+}
+
+model QuizOption {
+  id     String @id @default(uuid())
+  quizId String
+  value  String
+  quiz   Quiz   @relation(fields: [quizId], references: [id])
+}
+
+model Tasks {
+  id          String   @id @default(uuid())
+  lessonId    String
+  title       String
+  instruction String
+  createdAt   DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+}
+
+model QuizProgress {
+  id         String   @id @default(uuid())
+  userId     String
+  quizId     String
+  isCorrect  Boolean
+  answeredAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  quiz Quiz @relation(fields: [quizId], references: [id])
+}
+
+// Модель комментариев к уроку
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  userId    String
+  lessonId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+}
+
+// Прогресс пользователя
+model Progress {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  completed Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId]) // Уникальность прогресса для пользователя
+}
+
+// Модель интерактивных инструментов
+model Tool {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  url         String
+  createdAt   DateTime @default(now())
+}
+
+// Модель дизайнерских челленджей
+model Challenge {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+
+  // Отношения
+  participants ChallengeParticipant[]
+}
+
+// Записи о прохождении челленджа
+model ChallengeParticipant {
+  id          String    @id @default(uuid())
+  userId      String
+  challengeId String
+  completed   Boolean   @default(false)
+  submittedAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id])
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([userId, challengeId]) // Уникальность записи челленджа для пользователя
+}
+
+// Хранилище файлов (3D-модели, изображения)
+model File {
+  id         String   @id @default(uuid())
+  filename   String
+  url        String
+  uploadedAt DateTime @default(now())
+  userId     String?
+
+  user User? @relation(fields: [userId], references: [id])
+}
