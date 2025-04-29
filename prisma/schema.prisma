@@ -73,23 +73,25 @@ model Enrollment {
 }
 
 model Lesson {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  videoUrl  String?
-  theory    String?
-  imageUrl    String?
-  courseId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(uuid())
+  title        String
+  content      String
+  videoUrl     String?
+  theory       String?
+  imageUrl     String?
+  materialUrl  String?  
+  courseId     String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Обратные связи
-  course     Course     @relation(fields: [courseId], references: [id])
-  quizzes    Quiz[]
-  tasks      Tasks[]
-  progresses Progress[]
-  comments   Comment[]
+  course      Course     @relation(fields: [courseId], references: [id])
+  quizzes     Quiz[]
+  tasks       Tasks[]
+  progresses  Progress[]
+  comments    Comment[]
 }
+
 
 model PracticalTask {
   id          String   @id @default(uuid())
