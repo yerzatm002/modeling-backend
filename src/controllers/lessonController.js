@@ -5,6 +5,9 @@ const prisma = new PrismaClient();
 const getAllLessons = async (req, res) => {
   try {
     const lessons = await prisma.lesson.findMany({
+      orderBy: {
+        id: 'asc',
+      },
       include: {
         quizzes: {
           include: { options: true },
@@ -22,6 +25,7 @@ const getAllLessons = async (req, res) => {
     res.status(500).json({ error: "Серверлік қате" });
   }
 };
+
 
 const getLessonById = async (req, res) => {
   try {
