@@ -40,7 +40,7 @@ const getLessonById = async (req, res) => {
       },
     });
 
-    if (!lesson) return res.status(404).json({ error: "Урок табылған жоқ" });
+    if (!lesson) return res.status(404).json({ error: "Сабақ табылған жоқ" });
 
     res.json(lesson);
   } catch (error) {
